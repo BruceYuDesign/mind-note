@@ -13,28 +13,27 @@ groups:
 
 ## React Hooks 簡介
 
+在 React 19+ 中一共有 16 個 Hooks，用來取代 Class Component 中的生命週期方法和狀態管理。主要會用到的 Hooks 有 `useState`、`useRef`、`useEffect`、`useContext`、`useReducer`、`useMemo`、`useCallback`，不過這邊我還是先把所有的 Hooks 列出來：
 
-
-
-| 類別 | Hook | 用途 |
-| :-- | :-- | :-- |
-| 狀態管理 | useState | 組件狀態（重新渲染）|
-|  | useReducer | 複雜狀態管理 |
-|  | useSyncExternalStore | 外部存儲 |
-| 副作用 | useEffect | API、事件、監聽 |
-|  | useLayoutEffect | DOM 繪製前執行 |
-|  | useInsertionEffect | CSS-in-JS |
-| 參考 | useRef | DOM、不影響 UI 的數據 |
-|  | useImperativeHandle | 自訂 ref 行為 |
-| 性能優化 | useMemo | 記憶計算結果 |
-|  | useCallback | 記憶函式 |
-| 異步處理 | useTransition | 讓 UI 更流暢（骨架載入） |
-|  | useDeferredValue | 延遲更新數據 |
-|  | useOptimistic | 預測性 UI 更新 |
-|  | useActionState | 處理 Server Action |
-| 其他 | useId | 生成唯一 ID |
-|  | useContext | 讀取全域狀態 |
-|  | useDebugValue | 在 DevTools 中顯示 Hook 資訊 |
+| 類別 | Hook | 用途 | 常用 |
+| :-- | :-- | :-- | :-- |
+| 狀態管理 | useState | 組件狀態 | V |
+|  | useReducer | 複雜狀態管理 | V |
+|  | useSyncExternalStore | 整合非 React 的存儲 |  |
+| 副作用 | useEffect | API、事件、監聽 | V |
+|  | useLayoutEffect | DOM 繪製前執行 |  |
+|  | useInsertionEffect | CSS-in-JS |  |
+| 參考 | useRef | DOM、不影響 UI 的數據 | V |
+|  | useImperativeHandle | 自訂 ref 行為 |  |
+| 性能優化 | useMemo | 記憶計算結果 | V |
+|  | useCallback | 記憶函式 | V |
+| 異步處理 | useTransition | 讓 UI 更流暢（骨架載入） |  |
+|  | useDeferredValue | 延遲更新數據 |  |
+|  | useOptimistic | 預測性 UI 更新 |  |
+|  | useActionState | 處理 Server Action |  |
+| 其他 | useId | 生成唯一 ID |  |
+|  | useContext | 讀取全域狀態 | V |
+|  | useDebugValue | 在 DevTools 中顯示 Hook 資訊 |  |
 
 
 
@@ -320,6 +319,121 @@ export default function App() {
 
   // 錯誤的寫法，每次 render 都會重新計算
   // const [state, dispatch] = useReducer(reducer, init(initialArg));
+
+  // ...
+}
+```
+
+
+
+
+### useSyncExternalStore
+
+用來整合非 React 程式碼的存儲，例如 LocalStorage。
+
+```jsx
+const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot?);
+```
+
+參數：
+- `subscribe`：訂閱外部存儲的事件
+- `getSnapshot`：取得當前狀態的函數
+- `getServerSnapshot`：取得伺服器狀態的函數
+
+返回值：
+- `snapshot`：當前狀態值
+
+```jsx
+import { useSyncExternalStore } from 'react';
+
+function getSnapshot() {
+  return navigator.onLine;
+}
+
+function subscribe(callback) {
+  window.addEventListener('online', callback);
+  window.addEventListener('offline', callback);
+  return () => {
+    window.removeEventListener('online', callback);
+    window.removeEventListener('offline', callback);
+  };
+}
+
+export default function ChatIndicator() {
+  const isOnline = useSyncExternalStore(subscribe, getSnapshot);
+  return <p>{isOnline ? 'Online' : 'Offline'}</p>;
+}
+```
+
+
+
+
+#### subscribe 的用法
+
+`subscribe(callback)`
+
+- `callback`：當外部存儲有變動時的回調函數，即 `getSnapshot` 會重新執行
+
+```jsx
+import { useSyncExternalStore } from 'react';
+
+// 於 subscribe 中調用 getSnapshot
+function getSnapshot() {
+  return {
+    width: window.innerWidth,
+    height: window.innerHeight,
+  };
+}
+
+function subscribe(callback /* 調用 getSnapshot */) {
+  window.addEventListener('resize', callback);
+  return () => {
+    window.removeEventListener('resize', callback);
+  };
+}
+
+export default function WindowSize() {
+  const windowSize = useSyncExternalStore(subscribe, getSnapshot);
+
+  return (
+    <p>{windowSize.width} x {windowSize.height}</p>
+  );
+}
+```
+
+`subscribe` 函數需宣告在元件外部，因為每次 render 都會重新執行。如果在組件內部宣告，會導致每次呼叫時都會回傳新物件，每次回傳值與皆上次不同，將導致無限迴圈：
+
+```jsx
+// 正確的寫法
+function subscribe(callback) {
+  // ...
+}
+
+export default function App() {
+  // ...
+
+  // 錯誤的寫法，每次 render 都會回傳新物件，將導致無限迴圈
+  // function subscribe(callback) {
+  //   ...
+  // }
+
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot);
+
+  // ...
+}
+```
+
+如要在元件內部使用 `subscribe` 函數，可以使用 `useCallback` 來避免上述問題：
+
+```jsx
+export default function App({ someProp }) {
+  // ...
+
+  function subscribe = useCallback((callback) => {
+    // ...
+  }, [someProp]);
+
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot);
 
   // ...
 }
