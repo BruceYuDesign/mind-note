@@ -20,14 +20,14 @@ groups:
 | 狀態管理 | useState | 組件狀態 | V |
 |  | useReducer | 複雜狀態管理 | V |
 |  | useSyncExternalStore | 整合非 React 的存儲 |  |
-| 副作用 | useEffect | API、事件、監聽 | V |
+| 副作用與生命週期 | useEffect | API、事件、監聽 | V |
 |  | useLayoutEffect | DOM 繪製前執行 |  |
 |  | useInsertionEffect | CSS-in-JS |  |
-| 參考 | useRef | DOM、不影響 UI 的數據 | V |
+| 引用與 DOM 操作 | useRef | DOM、不影響 UI 的數據 | V |
 |  | useImperativeHandle | 自訂 ref 行為 |  |
 | 性能優化 | useMemo | 記憶計算結果 | V |
 |  | useCallback | 記憶函式 | V |
-| 異步處理 | useTransition | 讓 UI 更流暢（骨架載入） |  |
+| 非同步與 UI 流暢度 | useTransition | 讓 UI 更流暢（骨架載入） |  |
 |  | useDeferredValue | 延遲更新數據 |  |
 |  | useOptimistic | 預測性 UI 更新 |  |
 |  | useActionState | 處理 Server Action |  |
@@ -434,6 +434,46 @@ export default function App({ someProp }) {
   }, [someProp]);
 
   const snapshot = useSyncExternalStore(subscribe, getSnapshot);
+
+  // ...
+}
+```
+
+
+
+
+## 副作用與生命週期
+
+
+
+
+### useEffect
+
+用來處理副作用，例如 API 請求、事件監聽、訂閱。如果未使用 `window`、定時器、非同步請求等，則可能不需要使用 `useEffect`。
+
+```jsx
+useEffect(setup, dependencies?);
+```
+
+參數：
+
+- `setup`：副作用函數
+- `dependencies`：依賴的變數，當變數有變動時才會重新執行 `setup`
+
+```jsx
+import { useState, useEffect } from 'react';
+import { createConnection } from './chat.js';
+
+function ChatRoom({ roomId }) {
+  const [serverUrl, setServerUrl] = useState('https://localhost:1234');
+
+  useEffect(() => {
+    const connection = createConnection(serverUrl, roomId);
+    connection.connect();
+    return () => {
+      connection.disconnect();
+    };
+  }, [serverUrl, roomId]);
 
   // ...
 }
