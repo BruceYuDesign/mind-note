@@ -478,3 +478,24 @@ function ChatRoom({ roomId }) {
   // ...
 }
 ```
+
+#### dependencies 的用法
+
+`dependencies` 是一個陣列，當陣列中的變數有變動時，會重新執行：
+
+```jsx
+// 當 dependency 有變動時重新執行
+useEffect(() => {
+  // ...
+}, [dependency]);
+
+// 初始化時執行一次
+useEffect(() => {
+  // ...
+}, []);
+
+// 每次 render 都會執行
+useEffect(() => {
+  // ...
+});
+```
