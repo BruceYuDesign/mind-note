@@ -1,6 +1,6 @@
 元件：Counter.tsx
 
-'''jsx
+```jsx
 import { useState } from 'react';
 
 export default function Counter() {
@@ -12,11 +12,11 @@ export default function Counter() {
     </div>
   );
 }
-'''
+```
 
 ## 測試檔：Counter.test.tsx
 
-'''js
+```js
 import { render, screen, fireEvent } from '@testing-library/react';
 import Counter from './Counter';
 
@@ -32,4 +32,4 @@ describe('Counter', () => {
     expect(screen.getByText(/Count: 1/i)).toBeInTheDocument();
   });
 });
-'''
+```
