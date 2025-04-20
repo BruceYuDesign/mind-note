@@ -1,4 +1,4 @@
-# React 19 Hook 筆記整理（續）
+# React 19 Hook 筆記整理
 
 ---
 
