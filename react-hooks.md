@@ -13,7 +13,7 @@ groups:
 
 ## React Hooks 簡介
 
-在 React 19+ 中一共有 16 個 Hooks，用來取代 Class Component 中的生命週期方法和狀態管理。主要會用到的 Hooks 有 `useState`、`useRef`、`useEffect`、`useContext`、`useReducer`、`useMemo`、`useCallback`，不過這邊我還是先把所有的 Hooks 列出來：
+在 React 19 中一共有 16 個 Hooks，用來取代 Class Component 中的生命週期方法和狀態管理。主要會用到的 Hooks 有 `useState`、`useRef`、`useEffect`、`useContext`、`useReducer`、`useMemo`、`useCallback`，不過這邊我還是先把所有的 Hooks 列出來：
 
 | 類別 | Hook | 用途 | 常用 |
 | :-- | :-- | :-- | :-- |
@@ -343,6 +343,8 @@ const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot?
 返回值：
 - `snapshot`：當前狀態值
 
+#### useSyncExternalStore 基本用法
+
 ```jsx
 import { useSyncExternalStore } from 'react';
 
@@ -460,6 +462,8 @@ useEffect(setup, dependencies?);
 - `setup`：副作用函數
 - `dependencies`：依賴的變數，當變數有變動時才會重新執行 `setup`
 
+#### useEffect 基本用法
+
 ```jsx
 import { useState, useEffect } from 'react';
 import { createConnection } from './chat.js';
@@ -498,4 +502,352 @@ useEffect(() => {
 useEffect(() => {
   // ...
 });
+```
+
+
+
+
+### useLayoutEffect
+
+用來處理 DOM 繪製前的副作用，例如測量 DOM 元素的大小、位置等。與 `useEffect` 不同的是，`useLayoutEffect` 會在 DOM 更新後，瀏覽器渲染前立即執行。
+
+注意：頻繁使用 `useLayoutEffect` 會影響性能，應盡量避免。
+
+```jsx
+useLayoutEffect(setup, dependencies?);
+```
+
+參數：
+- `setup`：副作用函數
+- `dependencies`：與 `useEffect` 相同，依賴的變數，當變數有變動時才會重新執行 `setup`
+
+#### useLayoutEffect 基本用法
+
+```jsx
+import { useState, useRef, useLayoutEffect } from 'react';
+
+function Tooltip() {
+  const ref = useRef(null);
+  const [tooltipHeight, setTooltipHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    const { height } = ref.current.getBoundingClientRect();
+    setTooltipHeight(height);
+  }, []);
+
+  // ...
+}
+```
+
+
+
+
+### useInsertionEffect
+
+用來處理 CSS-in-JS 的副作用，例如在 DOM 繪製前插入樣式。
+
+注意：除非有使用 CSS-in-JS 的需求，否則不需要使用 `useInsertionEffect`。
+
+```jsx
+useInsertionEffect(setup, dependencies?);
+```
+
+參數：
+- `setup`：副作用函數
+- `dependencies`：與 `useEffect` 相同，依賴的變數，當變數有變動時才會重新執行 `setup`
+
+#### useInsertionEffect 基本用法
+
+```jsx
+// 在 CSS-in-JS 庫中
+let isInserted = new Set();
+
+function useCSS(rule) {
+  useInsertionEffect(() => {
+    if (!isInserted.has(rule)) {
+      isInserted.add(rule);
+      document.head.appendChild(getStyleForRule(rule));
+    }
+  });
+  return rule;
+}
+
+// 在組件中
+function Button() {
+  const className = useCSS(/* CSS-in-JS */);
+  return <div className={className} />;
+}
+```
+
+
+
+
+## 引用與 DOM 操作
+
+
+
+
+### useRef
+
+用來獲取 DOM 元素的引用，或存放不影響 UI 的數據，`ref` 更新時不會重新渲染。`useRef` 會回傳一個物件，物件的 `current` 屬性指向當前的值。
+
+```jsx
+const ref = useRef(initialValue);
+```
+
+參數：
+- `initialValue`：初始值，通常為 `null`
+
+返回值：
+- `ref`：一個物件，物件的 `current` 屬性指向當前的值
+
+#### useRef 基本用法
+
+```jsx
+import { useRef } from 'react';
+
+function Input() {
+  const inputRef = useRef(null);
+
+  const handleClick = () => {
+    inputRef.current.focus();
+  };
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type='text'
+      />
+      <button
+        onClick={handleClick}
+        type='button'
+      >
+        Focus
+      </button>
+    </>
+  );
+}
+```
+
+#### 避免重複建立 ref 的值
+
+`useRef` 會在每次組件渲染時，重新建立 `ref` 的值，因此如果在 `useRef` 中建立了耗效能的物件，則每次渲染都會重新建立，導致不必要的性能損耗。
+
+```jsx
+import { useRef } from 'react';
+
+function Video() {
+  // 不建議的寫法，每次 render 都會重新建立 ref 的值
+  const videoRef = useRef(new VideoPlayer());
+
+  // 建議的寫法
+  const videoRef = useRef(null);
+  if (videoRef.current === null) {
+    videoRef.current = new VideoPlayer();
+  }
+
+  // ...
+}
+```
+
+#### 給父層組件使用 ref
+
+可在子組件中的 `props` 新增 `ref` 屬性，即可讓父組件使用 `ref`。
+
+注意：
+1. 在 React 19 之前，需搭配 `forwardRef` 使用。
+2. 若能使用回調函式達到的效果，則不建議使用 `ref`。
+3. 若需要暴露給父組件的屬性，建議使用 `useImperativeHandle`。
+
+```jsx
+import { useRef } from 'react';
+
+function MyInput(props) {
+  return <input ref={props.ref} />;
+}
+
+function App() {
+  const inputRef = useRef(null);
+
+  return (
+    <MyInput ref={inputRef}/>
+  )
+}
+```
+
+在 React 19 前的用法：
+
+```jsx
+import { useRef, forwardRef } from 'react';
+
+const MyInput = forwardRef((props, ref) => {
+  return <input ref={ref} />;
+});
+
+function App() {
+  const inputRef = useRef(null);
+
+  return (
+    <MyInput ref={inputRef}/>
+  )
+}
+```
+
+
+
+### useImperativeHandle
+
+用來自訂 `ref` 的行為，自訂哪些屬性可讓父組件調用。
+
+```jsx
+useImperativeHandle(ref, createHandle, dependencies?);
+```
+
+參數：
+- `ref`：要自訂的 `ref`
+- `createHandle`：自訂的 `ref` 行為，會回傳一個物件，物件的屬性可讓父組件調用
+- `dependencies`：依賴的變數，當變數有變動時才會重新執行 `createHandle`
+
+#### useImperativeHandle 基本用法
+
+```jsx
+import { useRef, useImperativeHandle } from 'react';
+
+function MyInput({ ref }) {
+  const inputRef = useRef(null);
+
+  useImperativeHandle(ref, () => {
+    // 自訂 ref 行為，父組件僅可調用以下方法
+    return {
+      focus() {
+        inputRef.current.focus();
+      },
+      scrollIntoView() {
+        inputRef.current.scrollIntoView();
+      },
+    };
+  }, []);
+
+  return <input ref={inputRef} />;
+};
+```
+
+
+
+
+## 性能優化
+
+
+
+
+### useMemo
+
+用來記憶計算結果，避免不必要的計算。當依賴的變數有變動時，才會重新計算。
+
+```jsx
+const cachedValue = useMemo(calculateValue, dependencies)
+```
+
+參數：
+- `calculateValue`：計算函數
+- `dependencies`：依賴的變數，當變數有變動時才會重新計算
+
+返回值：
+- `cachedValue`：計算結果
+
+#### useMemo 基本用法
+
+<!-- TODO 這章節比較難寫 -->
+
+
+
+
+## 非同步與 UI 流暢度
+
+
+
+
+### useTransition
+
+用來讓 UI 更流暢，例如骨架載入。`useTransition` 會回傳一個布林值，表示當前是否在過渡中，和一個函式，用來觸發過渡。
+
+```jsx
+const [isPending, startTransition] = useTransition();
+```
+
+返回值：
+- `isPending`：布林值，表示當前是否在過渡中
+- `startTransition`：函式，用來觸發過渡
+
+#### useTransition 基本用法
+
+```jsx
+import { useState, useTransition } from 'react';
+
+function App() {
+  const [isPending, startTransition] = useTransition();
+  const [inputValue, setInputValue] = useState('');
+
+  const handleChange = (event) => {
+    startTransition(() => {
+      setInputValue(event.target.value);
+    });
+  };
+
+  return (
+    <>
+      <input
+        type='text'
+        onChange={handleChange}
+      />
+      <p>
+        { isPending ? 'Loading...' : inputValue }
+      </p>
+    </>
+  );
+}
+```
+
+
+
+
+### useDeferredValue
+
+用來延遲更新數據，避免 UI 卡頓。`useDeferredValue` 會回傳一個延遲的值，當依賴的變數有變動時，會延遲更新。
+
+```jsx
+const deferredValue = useDeferredValue(value, initialValue?);
+```
+
+參數：
+- `value`：要延遲的值
+- `initialValue`：初始值，預設為 `undefined`
+
+返回值：
+- `deferredValue`：延遲的值
+
+#### useDeferredValue 基本用法
+
+```jsx
+import { useState, useDeferredValue } from 'react';
+
+function App() {
+  const [inputValue, setInputValue] = useState('');
+  const deferredValue = useDeferredValue(inputValue);
+
+  const handleChange = (event) => {
+    setInputValue(event.target.value);
+  };
+
+  return (
+    <>
+      <input
+        type='text'
+        onChange={handleChange}
+      />
+      <p>{deferredValue}</p>
+    </>
+  );
+}
 ```
